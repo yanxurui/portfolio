@@ -1,0 +1,18 @@
+Net(
+  (conv1): Conv2d(4, 128, kernel_size=(1, 3), stride=(1, 1), bias=False)
+  (conv2): Conv2d(128, 64, kernel_size=(1, 3), stride=(1, 1), bias=False)
+  (conv3): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1), bias=False)
+  (conv4): Conv2d(32, 1, kernel_size=(1, 1), stride=(1, 1), bias=False)
+)
+  1, loss:2.398, acc:+0.125, ret:+1.006
+  2, loss:2.397, acc:+0.134, ret:+1.007
+  3, loss:2.392, acc:+0.132, ret:+1.010
+  4, loss:2.384, acc:+0.135, ret:+1.014
+  5, loss:2.378, acc:+0.139, ret:+1.014
+  6, loss:2.375, acc:+0.150, ret:+1.015
+  7, loss:2.373, acc:+0.155, ret:+1.016
+  8, loss:2.371, acc:+0.154, ret:+1.017
+  9, loss:2.369, acc:+0.158, ret:+1.018
+ 10, loss:2.368, acc:+0.162, ret:+1.019
+ 11, loss:2.366, acc:+0.167, ret:+1.020
+ 12, loss:2.365, acc:+0.167, ret:+1.021
