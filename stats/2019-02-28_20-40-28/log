@@ -1,0 +1,4 @@
+RnnNet(
+  (rnn1): RNN(44, 11, num_layers=2, bias=False, dropout=0.6, bidirectional=True)
+  (lin1): Linear(in_features=22, out_features=11, bias=False)
+)

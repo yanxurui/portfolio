@@ -1,0 +1,4 @@
+RnnNet(
+  (rnn1): RNN(44, 11, num_layers=2, bias=False, dropout=0.6)
+  (conv): Conv1d(5, 5, kernel_size=(11,), stride=(1,), bias=False)
+)
