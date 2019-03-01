@@ -1,6 +1,0 @@
-Conv2DNet(
-  (conv1): Conv2d(4, 128, kernel_size=(3, 3), stride=(1, 1), bias=False)
-  (conv2): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), bias=False)
-  (conv3): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1), bias=False)
-  (conv4): Conv2d(32, 1, kernel_size=(1, 1), stride=(1, 1), bias=False)
-)

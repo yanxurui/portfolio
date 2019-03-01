@@ -1,3 +1,0 @@
-RnnNet(
-  (rnn1): RNN(44, 11, num_layers=2, bias=False, dropout=0.6, bidirectional=True)
-)
