@@ -6,16 +6,19 @@ from model import CNN, ReturnAsLoss
 from dataset import StockData
 
 
+# data
 data_path = 'data.csv'
 features = ['Open', 'High', 'Low', 'Close']
 stocks = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'INTC', 'CSCO', 'CMCSA', 'PEP', 'NFLX', 'ADBE']
 
 # train
 epoch = 100 # repeat times
-train_batch_num = 100
-train_batch_size = 10
 window = 5 # using historical price in the past few days as features
 learning_rate = 0.001
+train_batch_num = 100
+train_batch_size = 10
+valid_batch_num = 1
+valid_batch_size = 100
 
 # test
 test_batch_num = 200
@@ -31,6 +34,8 @@ criterion = ReturnAsLoss()
 data = StockData(data_path, features=features, stocks=stocks,
     train_batch_num=train_batch_num,
     train_batch_size=train_batch_size,
+    valid_batch_num=valid_batch_num,
+    valid_batch_size=valid_batch_size,
     test_batch_num=test_batch_num,
     test_batch_size=test_batch_size,
     window=window)

@@ -33,33 +33,37 @@ class StockData:
            All price is divided by the closing price in the first day and then subtracted by 1
         y: is a binary 2d array (batch_size, assets)
     '''
-    def __init__(self, data, features=None, stocks=None,
+    def __init__(self, data, window=10, features=None, stocks=None,
                        train_batch_num=200,
                        train_batch_size=10,
-                       test_batch_num=None,  # default: till the end
-                       test_batch_size=None, # default: the same as train_batch_size
-                       window=10):
+                       valid_batch_num=1,
+                       valid_batch_size=100,
+                       test_batch_num=None, # default: till the end
+                       test_batch_size=1):
         if type(data) is str: # path is given
             data = self._load_data(data, features, stocks)
-        assert len(data.shape) == 3
-        self.train_end = train_batch_num * train_batch_size + window
-        self.n = data.shape[-1] # how many trainin examples
-        if self.train_end > self.n:
+        shape = data.shape
+        assert len(shape) == 3
+        self.n = shape[-1] # how many training examples
+        self.train_end = window + train_batch_num * train_batch_size
+        self.valid_end = self.train_end + valid_batch_num * valid_batch_size
+        if self.valid_end > self.n:
             raise ValueError("There is not enough data. Try to use a smaller train_batch_num")
         # logger = logging.getLogger('nn')
         # logger.info("Training from {} to {}".format(data[:, :, window].name, data[:, :, self.train_end-1].name))
         # logger.info("Testing from {} to {}".format(data[:, :, self.train_end].name, data[:, :, -1].name))
-        shape = data.shape
         cash = np.ones((shape[0], 1, shape[-1]))
-        data = np.concatenate((cash, data), axis=1)
-        self.data = data
-        self.train_batch_num = train_batch_num
-        self.train_batch_size = train_batch_size
-        self.test_batch_num = test_batch_num
-        self.test_batch_size = test_batch_size if test_batch_size else train_batch_size
+        self.data = np.concatenate((cash, data), axis=1)
         self.features = shape[0]
         self.window = window
-    
+        self.train_batch_num = train_batch_num
+        self.train_batch_size = train_batch_size
+        self.valid_batch_num = valid_batch_num
+        self.valid_batch_size = valid_batch_size
+        self.test_batch_num = test_batch_num
+        self.test_batch_size = test_batch_size
+
+
     def _load_data(self, data_path, features, stocks):
         if features is None:
             features = ['Open', 'High', 'Low', 'Close']
@@ -107,13 +111,17 @@ class StockData:
         for offset in count(start=self.window, step=self.train_batch_size, size=self.train_batch_num):
             yield self._get_train_batch(offset, offset+self.train_batch_size)
 
+    def valid(self):
+        for offset in count(start=self.train_end, step=self.valid_batch_size, size=self.valid_batch_num):
+            yield self._get_test_batch(offset, offset+self.valid_batch_size)
+
     def test(self):
         '''the rest period for test
         '''
-        for offset in count(start=self.train_end, step=self.test_batch_size, size=self.test_batch_num):
+        for offset in count(start=self.valid_end, step=self.test_batch_size, size=self.test_batch_num):
             if offset + self.test_batch_size > self.n:
                 return
-            self.test_end = offset+self.test_batch_size # save test_end for online learning
+            self.test_end = offset+self.test_batch_size # save test_end for online training
             yield self._get_test_batch(offset, self.test_end)
 
     def online_train(self, batch_num=10, p=0.2):
