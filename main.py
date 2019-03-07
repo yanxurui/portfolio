@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import pandas as pd
 
+
 torch.manual_seed(0)
 
 def allocate(a):
@@ -124,7 +125,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # variables defined here are global
     save_dir = Path(args.path)
-    shutil.copy(save_dir.joinpath('config.py'), './') # copy and overwrite
     from config_global import * 
 
     if not args.test:
