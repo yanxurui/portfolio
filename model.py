@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from networks import *
 
 # build network
 class CNN(nn.Module):

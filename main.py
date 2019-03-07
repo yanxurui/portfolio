@@ -30,6 +30,7 @@ def train_batch(X, target, y, net, optimizer, criterion):
     loss.backward()
     optimizer.step()    # Does the update
     output = output.detach().numpy()
+#    print('weights in batch', output)
     return (
         loss.item(),
         np.mean(output.argmax(1) == y.argmax(1)), # accuracy
@@ -94,7 +95,6 @@ def test():
         output = net(X)
         output = output.detach().numpy()
         weights.append(output)
-        # output = reallocate(output)
         acc = output.argmax(1) == y.argmax(1)
 
         summary.extend(zip(i, acc, ret(output, y)))
@@ -105,7 +105,6 @@ def test():
                 current_epoch.append(train_batch(X, target, y, *model))
             net.eval()
             current_epoch = np.array(current_epoch)
-            # print("loss:{:+.3f}, acc:{:.3f}, ret:{:+.3f}".format(*(np.mean(current_epoch, axis=1))))
     summary = pd.DataFrame(summary, columns=['index', 'acc', 'ret'])
     summary = summary.set_index('index')
     summary.to_csv(save_dir.joinpath('test_summary.csv'))
@@ -125,7 +124,7 @@ if __name__ == '__main__':
     # variables defined here are global
     save_dir = Path(args.path)
     shutil.copy(save_dir.joinpath('config.py'), './') # copy and overwrite
-    from config_global import * 
+    from config_global import *
 
     if not args.test:
         train()
