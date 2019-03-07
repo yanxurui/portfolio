@@ -10,7 +10,7 @@ def count(start=0, step=1, size=None):
     n = start
     i = 0
     while True:
-        if size and i >=size:
+        if size is not None and i >=size:
             return
         yield n
         n += step
@@ -33,25 +33,23 @@ class StockData:
            All price is divided by the closing price in the first day and then subtracted by 1
         y: is a binary 2d array (batch_size, assets)
     '''
-    def __init__(self, data, window=10, features=None, stocks=None,
-                       train_batch_num=200,
-                       train_batch_size=10,
-                       valid_batch_num=1,
-                       valid_batch_size=100,
-                       test_batch_num=None, # default: till the end
-                       test_batch_size=1):
-        if type(data) is str: # path is given
-            data = self._load_data(data, features, stocks)
+    def __init__(self, path, window=10, features=None, stocks=None,
+                       train_batch_num=200, train_batch_size=10,
+                       valid_batch_num=1, valid_batch_size=100,
+                       test_batch_num=None, test_batch_size=1):
+        data = self._load_data(path, features, stocks)
         shape = data.shape
         assert len(shape) == 3
         self.n = shape[-1] # how many training examples
         self.train_end = window + train_batch_num * train_batch_size
         self.valid_end = self.train_end + valid_batch_num * valid_batch_size
+        self.test_end = (self.valid_end + test_batch_num * test_batch_size) if test_batch_num else -1
         if self.valid_end > self.n:
             raise ValueError("There is not enough data. Try to use a smaller train_batch_num")
-        # logger = logging.getLogger('nn')
-        # logger.info("Training from {} to {}".format(data[:, :, window].name, data[:, :, self.train_end-1].name))
-        # logger.info("Testing from {} to {}".format(data[:, :, self.train_end].name, data[:, :, -1].name))
+        idx_to_date = lambda i: self.data_raw.index[i].strftime('%Y-%m-%d')
+        print("Training   from {} to {}".format(idx_to_date(window), idx_to_date(self.train_end-1)))
+        print("Validation from {} to {}".format(idx_to_date(self.train_end), idx_to_date(self.valid_end-1)))
+        print("Test       from {} to {}".format(idx_to_date(self.valid_end), idx_to_date(self.test_end)))
         cash = np.ones((shape[0], 1, shape[-1]))
         self.data = np.concatenate((cash, data), axis=1)
         self.features = shape[0]
@@ -64,13 +62,13 @@ class StockData:
         self.test_batch_size = test_batch_size
 
 
-    def _load_data(self, data_path, features, stocks):
+    def _load_data(self, path, features, stocks):
         if features is None:
             features = ['Open', 'High', 'Low', 'Close']
         index = idx[features, :]
         if stocks is not None:
             index = idx[features, stocks]
-        self.data_raw = pd.read_csv(data_path, header=[0, 1], index_col=0, parse_dates=True)
+        self.data_raw = pd.read_csv(path, header=[0, 1], index_col=0, parse_dates=True)
         data_pd_truncated = self.data_raw.T.loc[index, idx[:]]
         return data_pd_truncated.values.reshape((len(features), -1, len(self.data_raw)))
 
@@ -132,8 +130,8 @@ class StockData:
             yield self._get_train_batch(offset, offset+self.train_batch_size)
 
     def market(self, begin, end=-1):
-        market_movement = self.data_raw.iloc[begin:end]['Close']/self.data_raw.iloc[begin-1]['Close']
-        return market_movement.mean(axis=1)
+        market_average = self.data_raw.iloc[begin:end]['Close']/self.data_raw.iloc[begin-1]['Close']
+        return market_average.mean(axis=1)
 
 
 class StockData_CR(StockData):
@@ -169,6 +167,7 @@ class StockData_DR(StockData):
 
 if __name__ == '__main__':
     from numpy.testing import assert_equal, assert_array_equal, assert_array_almost_equal
+    # count
     c = count(1)
     assert_equal([next(c) for _ in range(3)], [1,2,3])
     c = count(2.5, 0.5)
@@ -176,12 +175,26 @@ if __name__ == '__main__':
     c = count(1, 2, 3)
     # The use of the list() instead of [] suppress the StopIteration exception thrown by next()
     assert_equal(list(next(c) for _ in range(4)), [1,3,5])
+    c = count(0, 1, 0)
+    assert_equal(list(next(c) for _ in range(1)), [])
 
-    assert_equal(dis([0.1, 0.2], gamma=0.5), 0.2)
+    # discounted
+    assert_equal(discounted([0.1, 0.2], gamma=0.5), 0.2)
 
 
+    # patch
     data = np.arange(1,2*2*20+1).reshape(2, 2, 20)
-    d = StockData(data, train_batch_num=2, train_batch_size=3, window=2)
+    def _load_data_dec(func, data):
+        def wrapper(self, *args):
+            func(self, *args)
+            return data
+        return wrapper
+    StockData._load_data = _load_data_dec(StockData._load_data, data)
+    d = StockData('data.csv', window=2,
+        train_batch_num=2, train_batch_size=3,
+        valid_batch_num=0, 
+        test_batch_size=3)
+
     # _get_batch
     i, X, y = d._get_batch(2, 2+3)
     assert_equal(i, [2,3,4])
