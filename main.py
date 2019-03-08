@@ -34,6 +34,7 @@ def train_batch(X, target, y):
     loss.backward()
     optimizer.step()    # Does the update
     output = output.detach().numpy()
+#    print('weights in batch', output)
     return (
         loss.item(),
         np.mean(output.argmax(1) == y.argmax(1)), # accuracy
@@ -162,7 +163,6 @@ if __name__ == '__main__':
     # variables defined here are global
     save_dir = Path(args.path)
     from config_global import epoch, net, optimizer, criterion, data
-
     if not args.test:
         train()
     net, optimizer, criterion = load_model(save_dir.joinpath('state.pt'))
