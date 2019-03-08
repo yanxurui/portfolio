@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from networks import *
 
 # build network
 class CNN(nn.Module):
@@ -71,7 +70,7 @@ class CNN_Sigmoid(CNN):
         return x
 
 class Conv2DNet(nn.Module):
-    '''convolution across different stocks'''
+    '''2d convolution across different stocks'''
     def __init__(self, shape):
         super(Conv2DNet, self).__init__()
 
@@ -102,7 +101,6 @@ class Conv2DNet(nn.Module):
         x = F.relu(self.conv4(x))
         x = x.view(-1, 5)
         x = self.extract(x)
-        #x = x.view(x.shape[0], -1)
         x = F.softmax(x, dim=-1)
         return x
 
@@ -119,14 +117,13 @@ class SeedLSTM(nn.Module):
         self.lstm = nn.LSTM(shape[1], 20)
         self.projection = nn.Linear(20, 1, bias=False)
 
-
     def forward(self, x):
         x_break = [x[:,:,i,:] for i in range(x.shape[2])]
         x_lstmed = []
         for i in range(len(x_break)):
             _x = x_break[i]
             o, (h, c) = self.lstm(_x.permute(2, 0, 1))
-            x_lstmed.append(torch.tanh(self.projection(h)))
+            x_lstmed.append(self.projection(h))
 
         x_dim_align = torch.stack(x_lstmed).squeeze()
         if len(x_dim_align.shape) < 2:
@@ -141,11 +138,41 @@ class SeedLSTM(nn.Module):
         pass
 
 
+class SeedRNN(nn.Module):
+    '''replace seed network's LSTM with RNN
+    '''
+    def __init__(self, shape):
+        super(SeedRNN, self).__init__()
+        self.rnn = nn.RNN(shape[1], 20)
+        self.projection = nn.Linear(20, 1, bias=False)
+
+    def forward(self, x):
+        x_break = [x[:,:,i,:] for i in range(x.shape[2])]
+        x_lstmed = []
+        for i in range(len(x_break)):
+            _x = x_break[i]
+            o, h = self.rnn(_x.permute(2, 0, 1))
+            x_lstmed.append(self.projection(h))
+
+        x_dim_align = torch.stack(x_lstmed).squeeze()
+        if len(x_dim_align.shape) < 2:
+            x_dim_align = x_dim_align.unsqueeze(1)
+        assert len(x_dim_align.shape) == 2
+
+        x_permuted = x_dim_align.permute(1, 0)
+
+        return F.softmax(x_permuted, dim=1)
+
+    def reset_parameters(self):
+        pass
 
 class OnehotLSTM(nn.Module):
+    '''seed lstm structure, add onehot to represent assets
+    '''
     def __init__(self, shape):
         super(OnehotLSTM, self).__init__()
-        self.lstm = nn.LSTM(shape[1]+ shape[2], 1)
+        self.lstm = nn.LSTM(shape[1]+ shape[2], 20)
+        self.projection = nn.Linear(20, 1, bias=False)
 
     def onehot(self, x, i, length):
         _x = torch.cat([x, torch.zeros(x.shape[0], x.shape[1], length)], 2)
