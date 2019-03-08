@@ -185,7 +185,7 @@ class OnehotLSTM(nn.Module):
         for i in range(len(x_break)):
             _x = x_break[i]
             o, (h, c) = self.lstm(self.onehot(_x.permute(2, 0, 1), i, len(x_break)))
-            x_lstmed.append(h)
+            x_lstmed.append(self.projection(h))
 
         x_dim_align = torch.stack(x_lstmed).squeeze()
         if len(x_dim_align.shape) < 2:
