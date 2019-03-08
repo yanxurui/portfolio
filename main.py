@@ -161,7 +161,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # variables defined here are global
     save_dir = Path(args.path)
-    from config_global import * 
+    from config_global import epoch, net, optimizer, criterion, data
 
     if not args.test:
         train()

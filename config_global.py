@@ -21,7 +21,7 @@ valid_batch_num = 1
 valid_batch_size = 100
 
 # test
-test_batch_num = 200
+test_batch_num = 500
 test_batch_size = 1
 online_train = False
 online_train_batch_num = 10
@@ -41,8 +41,11 @@ data = StockData(data_path, features=features, stocks=stocks,
     window=window)
 
 ######### LOAD LOCAL CONFIG, OVERWRITE DEFAULT CONFIG ############
-with open(os.path.join(sys.argv[1], 'config.py'), 'r') as f:
-    exec(f.read())
+try:
+	with open(os.path.join(sys.argv[1], 'config.py'), 'r') as f:
+	    exec(f.read())
+except FileNotFoundError:
+	print('Warning: no local config')
 ##################################################################
 
 
