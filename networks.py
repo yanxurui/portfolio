@@ -45,6 +45,8 @@ class Conv2DNet(nn.Module):
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                 m.reset_parameters()
 
+
+
 class SeedLSTM(nn.Module):
     def __init__(self, shape):
         super(SeedLSTM, self).__init__()
