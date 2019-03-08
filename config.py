@@ -12,7 +12,7 @@ stocks = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'INTC', 'CSCO', 'CMCSA', 'PEP', 'NFLX
 epoch = 100 # repeat times
 train_batch_num = 100
 train_batch_size = 10
-window = 10 # using historical price in the past few days as features
+window = 5 # using historical price in the past few days as features
 learning_rate = 0.001
 
 # test

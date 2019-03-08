@@ -48,7 +48,9 @@ class Conv2DNet(nn.Module):
 class SeedLSTM(nn.Module):
     def __init__(self, shape):
         super(SeedLSTM, self).__init__()
-        self.lstm = nn.LSTM(shape[1], 1)
+        self.lstm = nn.LSTM(shape[1], 20)
+        self.projection = nn.Linear(20, 1, bias=False)
+
 
     def forward(self, x):
         x_break = [x[:,:,i,:] for i in range(x.shape[2])]
@@ -56,7 +58,7 @@ class SeedLSTM(nn.Module):
         for i in range(len(x_break)):
             _x = x_break[i]
             o, (h, c) = self.lstm(_x.permute(2, 0, 1))
-            x_lstmed.append(h)
+            x_lstmed.append(torch.tanh(self.projection(h)))
 
         x_dim_align = torch.stack(x_lstmed).squeeze()
         if len(x_dim_align.shape) < 2:
@@ -69,6 +71,7 @@ class SeedLSTM(nn.Module):
 
     def reset_parameters(self):
         pass
+
 
 
 class OnehotLSTM(nn.Module):
