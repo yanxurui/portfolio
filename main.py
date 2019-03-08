@@ -162,7 +162,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # variables defined here are global
     save_dir = Path(args.path)
-    from config_global import epoch, net, optimizer, criterion, data
+    from config_global import epoch, net, optimizer, criterion, data, online_train
     if not args.test:
         train()
     net, optimizer, criterion = load_model(save_dir.joinpath('state.pt'))
