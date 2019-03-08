@@ -33,7 +33,7 @@ class StockData:
            All price is divided by the closing price in the first day and then subtracted by 1
         y: is a binary 2d array (batch_size, assets)
     '''
-    def __init__(self, path, window=10, features=None, stocks=None,
+    def __init__(self, path, window=10, features=None, stocks=None, cash=True,
                        train_batch_num=200, train_batch_size=10,
                        valid_batch_num=1, valid_batch_size=100,
                        test_batch_num=None, test_batch_size=1):
@@ -50,8 +50,10 @@ class StockData:
         print("Training   from {} to {}".format(idx_to_date(window), idx_to_date(self.train_end-1)))
         print("Validation from {} to {}".format(idx_to_date(self.train_end), idx_to_date(self.valid_end-1)))
         print("Test       from {} to {}".format(idx_to_date(self.valid_end), idx_to_date(self.test_end)))
-        cash = np.ones((shape[0], 1, shape[-1]))
-        self.data = np.concatenate((cash, data), axis=1)
+        if cash:
+            cash = np.ones((shape[0], 1, shape[-1]))
+            data = np.concatenate((cash, data), axis=1)
+        self.data = data
         self.features = shape[0]
         self.window = window
         self.train_batch_num = train_batch_num
