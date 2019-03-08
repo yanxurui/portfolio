@@ -27,26 +27,38 @@ online_train = False
 online_train_batch_num = 10
 p = 0.01
 
-# construct model
-net = CNN((train_batch_size, len(features), len(stocks)+1, window))
-optimizer = optim.Adam(net.parameters(), lr=learning_rate)
-criterion = ReturnAsLoss()
-data = StockData(data_path, features=features, stocks=stocks,
-    train_batch_num=train_batch_num,
-    train_batch_size=train_batch_size,
-    valid_batch_num=valid_batch_num,
-    valid_batch_size=valid_batch_size,
-    test_batch_num=test_batch_num,
-    test_batch_size=test_batch_size,
-    window=window)
+Net = CNN
+Optimizer = optim.Adam
+Criterion = ReturnAsLoss
+Data = StockData
+
 
 ######### LOAD LOCAL CONFIG, OVERWRITE DEFAULT CONFIG ############
 try:
-	with open(os.path.join(sys.argv[1], 'config.py'), 'r') as f:
-	    exec(f.read())
+    with open(os.path.join(sys.argv[1], 'config.py'), 'r') as f:
+        exec(f.read())
 except FileNotFoundError:
-	print('Warning: no local config')
+    print('Warning: no local config')
 ##################################################################
+
+
+# construct model
+_namespace = globals().copy()
+if 'net' not in _namespace:
+    net = Net((train_batch_size, len(features), len(stocks)+1, window))
+if 'optimizer' not in _namespace:
+    optimizer = Optimizer(net.parameters(), lr=learning_rate)
+if 'criterion' not in _namespace:
+    criterion = Criterion()
+if 'data' not in _namespace:
+    data = Data(data_path, features=features, stocks=stocks,
+        train_batch_num=train_batch_num,
+        train_batch_size=train_batch_size,
+        valid_batch_num=valid_batch_num,
+        valid_batch_size=valid_batch_size,
+        test_batch_num=test_batch_num,
+        test_batch_size=test_batch_size,
+        window=window)
 
 
 # print the current config
