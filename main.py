@@ -11,16 +11,15 @@ import pandas as pd
 
 torch.manual_seed(0)
 
-def allocate(a):
-    a[a<0] = 0
-    if a.sum() == 0:
-        a[0] = 1
-    else:
-        a = a/a.sum()
-    return a
-
 flatten = lambda l: [item for sublist in l for item in sublist]
 daily_ret = lambda ret_list, days: 100*(pow(np.prod(ret_list), 1/days)-1)
+
+def allocate(a):
+    a[a<0] = 0
+    if a.sum() <= 1:
+        return a
+    else:
+        return a/a.sum()
 
 def ret(output, y):
     output = np.apply_along_axis(allocate, -1, output)
@@ -34,7 +33,6 @@ def train_batch(X, target, y):
     loss.backward()
     optimizer.step()    # Does the update
     output = output.detach().numpy()
-#    print('weights in batch', output)
     return (
         loss.item(),
         np.mean(output.argmax(1) == y.argmax(1)), # accuracy
@@ -118,11 +116,11 @@ def test():
     #   2. for the sake of online learning
     print('Test...')
     summary = []
-    outputs = {}
+    outputs = []
 
     for i, X, y in data.test():
         output, acc, r = test_batch(X, y)
-        outputs.update(dict(zip(i, output)))
+        outputs.extend(zip(i, output))
         summary.extend(zip(i, acc, r))
 
         if online_train:
@@ -140,8 +138,8 @@ def test():
         summary['ret'].prod()
         ))
 
-    outputs = pd.DataFrame(outputs)
-    outputs = outputs.T
+    outputs = dict(outputs)
+    outputs = pd.DataFrame(outputs).T
     outputs.to_csv(save_dir.joinpath('test_output.csv'))
     print(outputs.sum(axis=0)/outputs.values.sum())
 
@@ -160,7 +158,8 @@ if __name__ == '__main__':
     parser.add_argument('path', help='path of experiment, must contain config.py')
     parser.add_argument('--test', action='store_true', help='test only')
     args = parser.parse_args()
-    # variables defined here are global
+    os.environ['CONFIG_LOCAL_DIR'] = args.path
+    # variables defined here are global/model level
     save_dir = Path(args.path)
     from config_global import epoch, net, optimizer, criterion, data, online_train
     if not args.test:

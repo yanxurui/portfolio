@@ -1,9 +1,10 @@
 import os
 import sys
+import traceback
 import inspect
 import torch.optim as optim
-from model import CNN, ReturnAsLoss
-from dataset import StockData
+from model import *
+from dataset import *
 
 
 # data
@@ -35,10 +36,11 @@ Data = StockData
 
 ######### LOAD LOCAL CONFIG, OVERWRITE DEFAULT CONFIG ############
 try:
-    with open(os.path.join(sys.argv[1], 'config.py'), 'r') as f:
+    config_dir = os.environ['CONFIG_LOCAL_DIR']
+    with open(os.path.join(config_dir, 'config.py'), 'r') as f:
         exec(f.read())
-except FileNotFoundError:
-    print('Warning: no local config')
+except (KeyError, FileNotFoundError):
+    traceback.print_exc()
 ##################################################################
 
 
