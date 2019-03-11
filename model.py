@@ -293,6 +293,17 @@ class Oracle(nn.Module):
         y_copy[:, 0] += 0.005 # be conservative
         return self._criteria(output, y_copy.argmax(dim=1))
 
+class BinaryClassification(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._criteria = nn.BCELoss()
+
+    def forward(self, output, y):
+        y_copy = y.clone()
+        y_copy[y>0] = 1
+        y_copy[y<0] = 0
+        return self._criteria(output, y_copy)
+
 class PenalizeSingle(nn.Module):
     '''Add penalize to oracle error function'''
     def __init__(self):
