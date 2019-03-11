@@ -2,9 +2,10 @@ import os
 import sys
 import traceback
 import inspect
+import warnings
 import torch.optim as optim
-from model import *
-from dataset import *
+from model import CNN, ReturnAsLoss
+from dataset import StockData
 
 
 # data
@@ -36,22 +37,17 @@ Data = StockData
 
 ######### LOAD LOCAL CONFIG, OVERWRITE DEFAULT CONFIG ############
 try:
-    config_dir = os.environ['CONFIG_LOCAL_DIR']
-    with open(os.path.join(config_dir, 'config.py'), 'r') as f:
-        exec(f.read())
+    local_config_dir = os.environ['CONFIG_LOCAL_DIR']
+    with open(os.path.join(local_config_dir, 'config.py'), 'r') as f:
+        exec(f.read()) # time consuming
 except (KeyError, FileNotFoundError):
+    warnings.warn("no local config file")
     traceback.print_exc()
 ##################################################################
 
 
 # construct model
 _namespace = globals().copy()
-if 'net' not in _namespace:
-    net = Net((train_batch_size, len(features), len(stocks)+1, window))
-if 'optimizer' not in _namespace:
-    optimizer = Optimizer(net.parameters(), lr=learning_rate)
-if 'criterion' not in _namespace:
-    criterion = Criterion()
 if 'data' not in _namespace:
     data = Data(data_path, features=features, stocks=stocks,
         train_batch_num=train_batch_num,
@@ -61,7 +57,13 @@ if 'data' not in _namespace:
         test_batch_num=test_batch_num,
         test_batch_size=test_batch_size,
         window=window)
-
+data.info()
+if 'net' not in _namespace:
+    net = Net((train_batch_size, len(data.features), len(data.stocks)+1, window))
+if 'optimizer' not in _namespace:
+    optimizer = Optimizer(net.parameters(), lr=learning_rate)
+if 'criterion' not in _namespace:
+    criterion = Criterion()
 
 # print the current config
 # at module level, globals and locals are the same dictionary
