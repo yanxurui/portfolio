@@ -196,7 +196,9 @@ class StockData_CR(StockData):
         indices, X, target, y = super()._get_train_batch(begin, end)
 
         forward_days = 3
+        # only consider the following day by default
         t = self._price_change(begin, end+forward_days-1) # (batch_size+3, assets)
+        t += 1
         # split into overlapping subarrays
         t = [t[i:i+forward_days] for i in range(0, len(t)-forward_days+1)]
         t = np.array(t)
@@ -212,7 +214,6 @@ class StockData_DR(StockData):
 
         forward_days = 3
         t = self._price_change(begin, end+forward_days-1) # (batch_size+3, assets)
-        t = t - 1
         # split into overlapping subarrays
         t = [t[i:i+forward_days] for i in range(0, len(t)-forward_days+1)]
         t = np.array(t)
@@ -238,27 +239,30 @@ class FunctionTestCase(unittest.TestCase):
 
 
 class StockDataTestCase(unittest.TestCase):
-    def setUp(self):
-        self.d = StockData('data2_test.csv',
+    @classmethod
+    def _d(cls):
+        if not hasattr(cls, 'd'):
+            cls.d = StockData('data2_test.csv',
             window=5,
             train_batch_num=2, train_batch_size=3,
             valid_batch_num=1, valid_batch_size=5,
             test_batch_num=2, test_batch_size=2)
+        return cls.d
 
     def test_fi(self):
-        d = self.d 
+        d = self._d()
         self.assertEqual(d._fi('Close'), [3])
         self.assertEqual(d._fi('Close', 'Open'), [3,0])
         self.assertEqual(d._fi('NONE'), [])
         self.assertEqual(d._fi('Open', 'NONE'), [0])
 
     def test_preprocess(self):
-        d = self.d
+        d = self._d()
         self.assertTrue(np.all(d.data[d._fi('ROC5')]>=-1))
         self.assertAlmostEqual(d.data[d._fi('CCI')].mean(), 0)
 
     def test_normalize(self):
-        d = self.d
+        d = self._d()
         X = d.data[:,:,0:3]
         X = np.ones(X.shape)
         o = d._fi('Open')
@@ -276,20 +280,20 @@ class StockDataTestCase(unittest.TestCase):
         self.assertEqual(X[v,0,2], 1) # (4-2)/2
 
     def test_historical_period(self):
-        d = self.d
+        d = self._d()
         t = d._historical_period(1,4)
         # cash
         self.assertEqual(t.shape[1], 11)
         self.assertTrue(np.all(t[:,0,:]==0))
 
     def test_price_change(self):
-        d = self.d
+        d = self._d()
         y = d._price_change(1,4)
         self.assertEqual(y.shape, (3,11))
-        self.assertEqual(y[0,0], 1)
+        self.assertEqual(y[0,0], 0)
 
     def test_get_batch(self):
-        d = self.d
+        d = self._d()
         i, X, y = d._get_batch(11,14)
         self.assertEqual(X.shape, (3, len(d.features), len(d.stocks)+1, d.window))
         self.assertEqual(y.shape, (3, len(d.stocks)+1))
@@ -302,20 +306,20 @@ class StockDataTestCase(unittest.TestCase):
         self.assertEqual(X[1, o, 1, 1], d.data[o, 0, 11-5+1+1]/d.data[c, 0, 11-5+1]-1)
 
     def test_train(self):
-        d = self.d
+        d = self._d()
         g = d.train()
         i, X, t, y = next(g) # [5,5+3)
         i, X, t, y = next(g) # [8,8+3)
         self.assertEqual(i, [8,9,10])
 
     def test_valid(self):
-        d = self.d
+        d = self._d()
         g = d.valid()
         i, X, y = next(g) # [11, 11+5)
         self.assertEqual(i, list(range(11, 11+5)))
 
     def test_test(self):
-        d = self.d
+        d = self._d()
         g = d.test()
         i, X, y = next(g) # [16,16+2)
         i, X, y = next(g) # [18,18+2)
@@ -326,7 +330,7 @@ class StockDataTestCase(unittest.TestCase):
         self.assertEqual(i, i2[-2:])
 
     def test_market(self):
-        d = self.d
+        d = self._d()
         m = d.market(10, 15)
         self.assertEqual(m.shape, (5,))
         self.assertFalse(np.isnan(m).any())
