@@ -66,7 +66,7 @@ def train():
         aggregate = [np.mean(current_epoch['tr_loss']),
                      np.mean(current_epoch['tr_ret'])*100,
                      np.mean(current_epoch['va_ret'])*100]
-        print("epoch:{:3d}, tr_loss:{:+.3f}, tr_ret:{:.3f}, va_ret:{:.3f}".format(
+        print("epoch:{:3d}, tr_loss:{:+.3f}, tr_ret:{:+.3f}, va_ret:{:+.3f}".format(
             e+1, *aggregate))
         # only save the best model on validation set
         if not summary or aggregate[-1] > summary[-1][-1]:
@@ -122,7 +122,7 @@ def test():
     outputs = dict(outputs)
     outputs = pd.DataFrame(outputs).T
     outputs.to_csv(save_dir.joinpath('test_output.csv'))
-    print(outputs.sum(axis=0)/outputs.values.sum())
+    print((outputs.sum(axis=0)/outputs.values.sum()).round(3))
 
 
 def load_model(path):
