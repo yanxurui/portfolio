@@ -34,6 +34,12 @@ class StockData:
         X: is a 4d array (batch_size, OHLC, assets, window)
            All price is divided by the closing price in the first day and then subtracted by 1
         y: is a binary 2d array (batch_size, assets)
+
+    features = ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume', 'MA5', 'MA10',
+       'MACD', 'MACDS', 'MACDH', 'ROC5', 'ROC10', 'EMA20', 'ATR', 'BBANDU',
+       'BBANDM', 'BBANDL', 'CCI', 'RSI', 'STOCHK', 'STOCHD', 'OBV']
+    stocks = ['AAPL', 'ADBE', 'AMZN', 'CMCSA', 'CSCO', 'GOOGL', 'INTC', 'MSFT',
+       'NFLX', 'PEP']
     '''
     def __init__(self, path, cash=True, window=10, features=None, stocks=None,
                        train_batch_num=200, train_batch_size=10,
@@ -216,7 +222,7 @@ class StockData_DR(StockData):
 
 
 class FunctionTestCase(unittest.TestCase):
-    def testCound(self):
+    def testCount(self):
         c = count(1)
         self.assertEqual([next(c) for _ in range(3)], [1,2,3])
         c = count(2.5, 0.5)
@@ -234,7 +240,6 @@ class FunctionTestCase(unittest.TestCase):
 class StockDataTestCase(unittest.TestCase):
     def setUp(self):
         self.d = StockData('data2_test.csv',
-            # print_date=False,
             window=5,
             train_batch_num=2, train_batch_size=3,
             valid_batch_num=1, valid_batch_size=5,
@@ -323,9 +328,28 @@ class StockDataTestCase(unittest.TestCase):
     def test_market(self):
         d = self.d
         m = d.market(10, 15)
-        print(m)
         self.assertEqual(m.shape, (5,))
         self.assertFalse(np.isnan(m).any())
+        c = d._fi('Close')[0]
+        self.assertEqual(m[1], np.mean(d.data[c,:,10+1]/d.data[c,:,10-1]))
+
+    def test_single_stock(self):
+        d = StockData('data2_test.csv',
+            cash=False,
+            window=5, features=['Close'], stocks=['AAPL'],
+            train_batch_num=2, train_batch_size=3,
+            valid_batch_num=1, valid_batch_size=5,
+            test_batch_num=2, test_batch_size=2)
+        g = d.train()
+        i, X, t, y = next(g) # [5,5+3)
+        i, X, t, y = next(g) # [8,8+3)
+        self.assertEqual(X.shape, (3, 1, 1, 5))
+        # close price on the the second day of the second sequence
+        self.assertEqual(X[1, 0, 0, 1],
+            d.data_raw['Close', 'AAPL'][8+1-5+1]/d.data_raw['Close', 'AAPL'][8+1-5]-1)
+        m = d.market(10, 15)
+        self.assertEqual(m[1],
+            d.data_raw.iloc[10+1]['Close', 'AAPL']/d.data_raw.iloc[10-1]['Close', 'AAPL'])
 
 
 if __name__ == '__main__':
