@@ -3,7 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # build network
-class CNN(nn.Module):
+class Base(nn.Module):
+    def reset_parameters(self):
+        for m in self.children():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+                m.reset_parameters()
+
+class CNN(Base):
     def __init__(self, shape):
         super(CNN, self).__init__()
         x = torch.zeros(shape) # dummy inputs used to infer shapes of layers
@@ -37,11 +43,6 @@ class CNN(nn.Module):
         x = F.softmax(x, dim=1)
         return x
 
-    def reset_parameters(self):
-        for m in self.children():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-                m.reset_parameters()
-
 
 class CNN_Tanh(CNN):
     '''replace softmax with tanh
@@ -66,8 +67,8 @@ class CNN_Sigmoid(CNN):
         x = self.conv4(x)
         x = x.view(x.shape[0], -1)
         x = torch.sigmoid(x) # -> [0, 1]
-        x = x/torch.sum(x, dim=-1, keepdim=True) # broadcast
         return x
+
 
 class Conv2DNet(nn.Module):
     '''2d convolution across different stocks'''
@@ -271,7 +272,7 @@ class ReturnAsLoss(nn.Module):
 
     def forward(self, output, y):
         '''negative logarithm return'''
-        return -torch.sum(torch.log(torch.sum(output * y, dim=1)))
+        return -torch.sum(torch.log(torch.sum(output * (y+1), dim=1)))
 
 
 class CustomizedLoss(nn.Module):
@@ -279,7 +280,7 @@ class CustomizedLoss(nn.Module):
         super().__init__()
 
     def forward(self, output, y):
-        return -torch.sum(torch.sum(output * y, dim=1))
+        return -torch.mean(torch.sum(output * y, dim=1))
 
 
 class Oracle(nn.Module):

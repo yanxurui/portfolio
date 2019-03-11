@@ -64,8 +64,8 @@ def train():
 
         # loss, train average daily % return, valid ...
         aggregate = [np.mean(current_epoch['tr_loss']),
-                     (np.mean(current_epoch['tr_ret'])-1)*100,
-                     (np.mean(current_epoch['va_ret'])-1)*100]
+                     np.mean(current_epoch['tr_ret'])*100,
+                     np.mean(current_epoch['va_ret'])*100]
         print("epoch:{:3d}, tr_loss:{:+.3f}, tr_ret:{:.3f}, va_ret:{:.3f}".format(
             e+1, *aggregate))
         # only save the best model on validation set
@@ -117,7 +117,7 @@ def test():
     summary = pd.DataFrame(summary, columns=['index', 'ret'])
     summary = summary.set_index('index')
     summary.to_csv(save_dir.joinpath('test_summary.csv'))
-    print('ret: {:+.3f}'.format(summary['ret'].prod()))
+    print('ret: {:+.3f}'.format((summary['ret']+1).prod()))
 
     outputs = dict(outputs)
     outputs = pd.DataFrame(outputs).T

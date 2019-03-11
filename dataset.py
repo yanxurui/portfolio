@@ -131,9 +131,9 @@ class StockData:
     def _price_change(self, begin, end):
         # closing price movement relative to the previous day in a batch
         tmp = self.data[self._fi('Close')[0],:,begin-1:end] # 3d->2d
-        y = np.diff(tmp, axis=-1)/tmp[:,:-1] + 1
+        y = np.diff(tmp, axis=-1)/tmp[:,:-1]
         if self.cash:
-            cash = np.ones((1, y.shape[1]))
+            cash = np.zeros((1, y.shape[1]))
             y = np.concatenate((cash, y), axis=0)
         return np.transpose(y)
 
