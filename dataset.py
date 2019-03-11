@@ -83,7 +83,7 @@ class StockData:
         data_pd_truncated = self.data_raw.T.loc(axis=0)[index]
         features = list(data_pd_truncated.index.unique(0)) # features in order
         self.features = {f:i for i,f in enumerate(features)}
-        self.stocks = data_pd_truncated.index.unique(1)
+        self.stocks = list(data_pd_truncated.index.unique(1))
         # (features, stocks, time)
         self.n = len(self.data_raw) # number of days
         self.data = data_pd_truncated.values.reshape((len(features), -1, self.n))
@@ -178,7 +178,9 @@ class StockData:
             yield self._get_train_batch(offset, offset+self.train_batch_size)
 
     def market(self, begin, end=-1):
-        market_average = self.data_raw.iloc[begin:end]['Close']/self.data_raw.iloc[begin-1]['Close']
+        close = self.data_raw.iloc[begin:end].loc[:,idx['Close', self.stocks]]
+        close_prev = self.data_raw.iloc[begin-1].loc[idx['Close', self.stocks]]
+        market_average = close/close_prev # broadcast
         return market_average.mean(axis=1)
 
 
@@ -317,6 +319,13 @@ class StockDataTestCase(unittest.TestCase):
         # test_online_train
         i2, X2, t2, y2 = next(d.online_train(batch_num=1, p=1))
         self.assertEqual(i, i2[-2:])
+
+    def test_market(self):
+        d = self.d
+        m = d.market(10, 15)
+        print(m)
+        self.assertEqual(m.shape, (5,))
+        self.assertFalse(np.isnan(m).any())
 
 
 if __name__ == '__main__':
