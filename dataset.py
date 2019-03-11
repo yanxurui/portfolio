@@ -1,10 +1,8 @@
 import unittest
-from itertools import count
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 idx = pd.IndexSlice
-import pdb
 
 
 def count(start=0, step=1, size=None):
@@ -243,7 +241,6 @@ class StockDataTestCase(unittest.TestCase):
     def test_fi(self):
         d = self.d 
         self.assertEqual(d._fi('Close'), [3])
-        # pdb.set_trace()
         self.assertEqual(d._fi('Close', 'Open'), [3,0])
         self.assertEqual(d._fi('NONE'), [])
         self.assertEqual(d._fi('Open', 'NONE'), [0])
