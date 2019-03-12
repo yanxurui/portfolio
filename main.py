@@ -55,14 +55,18 @@ def train():
         for i, X, target, y in data.train():
             tr_loss, tr_ret = train_batch(X, target, y)
             current_epoch['tr_loss'].append(tr_loss)
+            current_epoch['tr_ind'].extend(i)
             current_epoch['tr_ret'].extend(tr_ret)
 
+        # import pdb
+        # pdb.set_trace()
         # evaluate
         for i, X, y in data.valid():
             _, va_ret = test_batch(X, y)
+            current_epoch['va_ind'].extend(i)
             current_epoch['va_ret'].extend(va_ret)
 
-        # loss, train average daily % return, valid ...
+        # 3 values: loss, train average daily % return, valid ...
         aggregate = [np.mean(current_epoch['tr_loss']),
                      np.mean(current_epoch['tr_ret'])*100,
                      np.mean(current_epoch['va_ret'])*100]
@@ -71,6 +75,7 @@ def train():
         # only save the best model on validation set
         if not summary or aggregate[-1] > summary[-1][-1]:
             best = e+1
+            best_epoch = current_epoch
             torch.save({
                 'net': net.state_dict(),
                 'optimizer': optimizer.state_dict(),
@@ -80,8 +85,10 @@ def train():
 
     summary = pd.DataFrame(summary, columns=['tr_loss', 'tr_ret', 'va_ret']).to_csv(
         save_dir.joinpath('train_summary.csv'))
-    pd.DataFrame(current_epoch['tr_ret'], columns=['tr_ret']).to_csv(
+    pd.DataFrame({'ret':current_epoch['tr_ret']}, index=current_epoch['tr_ind']).to_csv(
         save_dir.joinpath('train_last_epoch.csv'))
+    pd.DataFrame({'ret':best_epoch['va_ret']}, index=best_epoch['va_ind']).to_csv(
+        save_dir.joinpath('valid_best_epoch.csv'))
     print('Training finished after {:.1f}s'.format(time()-start_time))
     print('Best epoch: {}'.format(best))
     print('-'*20)
@@ -123,7 +130,6 @@ def test():
     outputs = pd.DataFrame(outputs).T
     outputs.to_csv(save_dir.joinpath('test_output.csv'))
     print((outputs.sum(axis=0)/outputs.values.sum()).round(3))
-
 
 def load_model(path):
     checkpoint = torch.load(path)
