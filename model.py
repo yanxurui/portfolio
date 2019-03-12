@@ -9,33 +9,35 @@ class Base(nn.Module):
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                 m.reset_parameters()
 
+
 class CNN(Base):
     def __init__(self, shape):
         super(CNN, self).__init__()
         x = torch.zeros(shape) # dummy inputs used to infer shapes of layers
         # print(x.shape)
-        
+
         self.conv1 = nn.Conv2d(x.shape[1], 128, (1, 3), bias=False)
         x = self.conv1(x)
         # print(x.shape)
-        
+
         self.conv2 = nn.Conv2d(x.shape[1], 64, (1, 3), bias=False)
         x = self.conv2(x)
         # print(x.shape)
-        
+
         self.conv3 = nn.Conv2d(x.shape[1], 32, (1, x.shape[3]), bias=False)
         x = self.conv3(x)
         # print(x.shape)
-        
+
         self.conv4 = nn.Conv2d(x.shape[1], 1, (1, 1), bias=False)
         x = self.conv4(x)
         # print(x.shape)
-        
+
         x = x.view(x.shape[0], -1) # 4d -> 2d
         # print(x.shape)
 
-    def output(self, x):
-        return F.softmax(x, dim=1)
+        self.output = nn.Softmax(dim=1)
+        x = self.output(x)
+        # print(x.shape)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -47,15 +49,25 @@ class CNN(Base):
         return x
 
 
+class Softmax_T(nn.Module):
+    def __init__(self, dim=None, T=30):
+        super().__init__()
+        self.dim = dim
+        self.T = T
+
+    def forward(self, input):
+        if self.training:
+            return F.softmax(input, dim=self.dim)
+        else:
+            return F.softmax(input/self.T, dim=self.dim)
+
+
 class CNN_T(CNN):
     '''with temperature to calibrate confidence
     '''
-    def __init__(self, shape, T=30):
+    def __init__(self, shape, **kargs):
         super().__init__(shape)
-        self.T = T
-
-    def output(self, x):
-        return F.softmax(x/self.T, dim=1)
+        self.output = Softmax_T(dim=1, **kargs)
 
 
 class CNN_Tanh(CNN):

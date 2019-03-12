@@ -51,6 +51,7 @@ def train():
     summary = []
     # loop over epoch and batch
     for e in range(epoch):
+        net.train()
         current_epoch = defaultdict(list)
         for i, X, target, y in data.train():
             tr_loss, tr_ret = train_batch(X, target, y)
@@ -61,11 +62,11 @@ def train():
         # import pdb
         # pdb.set_trace()
         # evaluate
+        net.eval()
         for i, X, y in data.valid():
             _, va_ret = test_batch(X, y)
             current_epoch['va_ind'].extend(i)
             current_epoch['va_ret'].extend(va_ret)
-
         # 3 values: loss, train average daily % return, valid ...
         aggregate = [np.mean(current_epoch['tr_loss']),
                      np.mean(current_epoch['tr_ret'])*100,
