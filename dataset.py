@@ -183,11 +183,11 @@ class StockData:
         for offset in offsets:
             yield self._get_train_batch(offset, offset+self.train_batch_size)
 
-    def market(self, begin, end=-1):
+    def UBAH(self, begin, end=-1):
         close = self.data_raw.iloc[begin:end].loc[:,idx['Close', self.stocks]]
         close_prev = self.data_raw.iloc[begin-1].loc[idx['Close', self.stocks]]
-        market_average = close/close_prev # broadcast
-        return market_average.mean(axis=1)
+        ROC = close/close_prev # broadcast
+        return ROC.mean(axis=1)
 
 
 class StockData_CR(StockData):
@@ -329,9 +329,9 @@ class StockDataTestCase(unittest.TestCase):
         i2, X2, t2, y2 = next(d.online_train(batch_num=1, p=1))
         self.assertEqual(i, i2[-2:])
 
-    def test_market(self):
+    def test_UBAH(self):
         d = self._d()
-        m = d.market(10, 15)
+        m = d.UBAH(10, 15)
         self.assertEqual(m.shape, (5,))
         self.assertFalse(np.isnan(m).any())
         c = d._fi('Close')[0]
@@ -351,7 +351,7 @@ class StockDataTestCase(unittest.TestCase):
         # close price on the the second day of the second sequence
         self.assertEqual(X[1, 0, 0, 1],
             d.data_raw['Close', 'AAPL'][8+1-5+1]/d.data_raw['Close', 'AAPL'][8+1-5]-1)
-        m = d.market(10, 15)
+        m = d.UBAH(10, 15)
         self.assertEqual(m[1],
             d.data_raw.iloc[10+1]['Close', 'AAPL']/d.data_raw.iloc[10-1]['Close', 'AAPL'])
 
