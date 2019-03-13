@@ -73,27 +73,17 @@ class CNN_T(CNN):
 class CNN_Tanh(CNN):
     '''replace softmax with tanh
     '''
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = self.conv4(x)
-        x = x.view(x.shape[0], -1)
-        x = torch.tanh(x) # -> [-1, 1]
-        return x
+    def __init__(self, shape):
+        super().__init__(shape)
+        self.output = nn.Tanh()
 
 
 class CNN_Sigmoid(CNN):
     '''replace softmax with sigmoid and then do x/x.sum()
     '''
-    def forward(self, x):
-        x = torch.relu(self.conv1(x))
-        x = torch.relu(self.conv2(x))
-        x = torch.relu(self.conv3(x))
-        x = self.conv4(x)
-        x = x.view(x.shape[0], -1)
-        x = torch.sigmoid(x) # -> [0, 1]
-        return x
+    def __init__(self, shape):
+        super().__init__(shape)
+        self.output = nn.Sigmoid()
 
 
 class Conv2DNet(nn.Module):
@@ -320,7 +310,7 @@ class Oracle(nn.Module):
         return self._criteria(output, y_copy.argmax(dim=1))
 
 
-class BinaryClassification(nn.Module):
+class Binary(nn.Module):
     def __init__(self):
         super().__init__()
         self._criteria = nn.BCELoss()
