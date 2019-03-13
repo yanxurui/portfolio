@@ -152,4 +152,3 @@ if __name__ == '__main__':
         train()
     net, optimizer, criterion = load_model(save_dir.joinpath('state.pt'))
     test()
-
