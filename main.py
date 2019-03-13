@@ -34,7 +34,6 @@ def train_batch(X, target, y):
     loss.backward()
     optimizer.step()    # Does the update
     output = output.detach().numpy()
-#    print('weights in batch', output)
     return (
         loss.item(),
         np.mean(output.argmax(1) == y.argmax(1)), # accuracy
@@ -66,7 +65,7 @@ def train():
         train_epoch = np.array(train_epoch)
 
         # evaluate
-        valid_epoch = []        
+        valid_epoch = []
         for i, X, y in data.valid():
             _, acc, r = test_batch(X, y)
             valid_epoch.extend(zip(acc, r))
