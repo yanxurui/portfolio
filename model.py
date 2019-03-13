@@ -166,6 +166,39 @@ class SeedRNN(nn.Module):
     def reset_parameters(self):
         pass
 
+class StackRNN(nn.Module):
+    '''replace seed network's LSTM with RNN
+    '''
+    def __init__(self, shape, layers=2, dropout=0):
+        super(StackRNN, self).__init__()
+        self.rnn = nn.RNN(shape[1], 20, num_layers=layers, dropout=dropout)
+        self.projection = nn.Linear(20, 1, bias=False)
+        self.conv1d = nn.Conv1d(layers, 1, 1, bias=False)
+
+    def forward(self, x):
+        x_break = [x[:,:,i,:] for i in range(x.shape[2])]
+        x_lstmed = []
+        for i in range(len(x_break)):
+            _x = x_break[i]
+            o, h = self.rnn(_x.permute(2, 0, 1))
+            x_lstmed.append(self.projection(h))
+
+        x_dim_align = torch.stack(x_lstmed).squeeze()
+        if len(x_dim_align.shape) < 3:
+            x_dim_align = x_dim_align.unsqueeze(2)
+        x_dim_align = self.conv1d(x_dim_align)
+        x_dim_align = x_dim_align.squeeze()
+        if len(x_dim_align.shape) < 2:
+            x_dim_align = x_dim_align.unsqueeze(1)
+        assert len(x_dim_align.shape) == 2
+
+        x_permuted = x_dim_align.permute(1, 0)
+
+        return F.softmax(x_permuted, dim=1)
+
+    def reset_parameters(self):
+        pass
+
 class OnehotLSTM(nn.Module):
     '''seed lstm structure, add onehot to represent assets
     '''
