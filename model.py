@@ -3,71 +3,88 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # build network
-class CNN(nn.Module):
-    def __init__(self, shape):
-        super(CNN, self).__init__()
-        x = torch.zeros(shape) # dummy inputs used to infer shapes of layers
-        print(x.shape)
-        
-        self.conv1 = nn.Conv2d(x.shape[1], 128, (1, 3), bias=False)
-        x = self.conv1(x)
-        print(x.shape)
-        
-        self.conv2 = nn.Conv2d(x.shape[1], 64, (1, 3), bias=False)
-        x = self.conv2(x)
-        print(x.shape)
-        
-        self.conv3 = nn.Conv2d(x.shape[1], 32, (1, x.shape[3]), bias=False)
-        x = self.conv3(x)
-        print(x.shape)
-        
-        self.conv4 = nn.Conv2d(x.shape[1], 1, (1, 1), bias=False)
-        x = self.conv4(x)
-        print(x.shape)
-        
-        x = x.view(x.shape[0], -1) # 4d -> 2d
-        print(x.shape)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = self.conv4(x)
-        x = x.view(x.shape[0], -1)
-        x = F.softmax(x, dim=1)
-        return x
-
+class Base(nn.Module):
     def reset_parameters(self):
         for m in self.children():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                 m.reset_parameters()
 
 
-class CNN_Tanh(CNN):
-    '''replace softmax with tanh
-    '''
+class CNN(Base):
+    def __init__(self, shape):
+        super(CNN, self).__init__()
+        x = torch.zeros(shape) # dummy inputs used to infer shapes of layers
+        # print(x.shape)
+
+        self.conv1 = nn.Conv2d(x.shape[1], 128, (1, 3), bias=False)
+        x = self.conv1(x)
+        # print(x.shape)
+
+        self.conv2 = nn.Conv2d(x.shape[1], 64, (1, 3), bias=False)
+        x = self.conv2(x)
+        # print(x.shape)
+
+        self.conv3 = nn.Conv2d(x.shape[1], 32, (1, x.shape[3]), bias=False)
+        x = self.conv3(x)
+        # print(x.shape)
+
+        self.conv4 = nn.Conv2d(x.shape[1], 1, (1, 1), bias=False)
+        x = self.conv4(x)
+        # print(x.shape)
+
+        x = x.view(x.shape[0], -1) # 4d -> 2d
+        # print(x.shape)
+
+        self.output = nn.Softmax(dim=1)
+        x = self.output(x)
+        # print(x.shape)
+
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = self.conv4(x)
         x = x.view(x.shape[0], -1)
-        x = torch.tanh(x) # -> [-1, 1]
+        x = self.output(x)
         return x
+
+
+class Softmax_T(nn.Module):
+    def __init__(self, dim=None, T=30):
+        super().__init__()
+        self.dim = dim
+        self.T = T
+
+    def forward(self, input):
+        if self.training:
+            return F.softmax(input, dim=self.dim)
+        else:
+            return F.softmax(input/self.T, dim=self.dim)
+
+
+class CNN_T(CNN):
+    '''with temperature to calibrate confidence
+    '''
+    def __init__(self, shape, **kargs):
+        super().__init__(shape)
+        self.output = Softmax_T(dim=1, **kargs)
+
+
+class CNN_Tanh(CNN):
+    '''replace softmax with tanh
+    '''
+    def __init__(self, shape):
+        super().__init__(shape)
+        self.output = nn.Tanh()
 
 
 class CNN_Sigmoid(CNN):
     '''replace softmax with sigmoid and then do x/x.sum()
     '''
-    def forward(self, x):
-        x = torch.relu(self.conv1(x))
-        x = torch.relu(self.conv2(x))
-        x = torch.relu(self.conv3(x))
-        x = self.conv4(x)
-        x = x.view(x.shape[0], -1)
-        x = torch.sigmoid(x) # -> [0, 1]
-        x = x/torch.sum(x, dim=-1, keepdim=True) # broadcast
-        return x
+    def __init__(self, shape):
+        super().__init__(shape)
+        self.output = nn.Sigmoid()
+
 
 class Conv2DNet(nn.Module):
     '''2d convolution across different stocks'''
@@ -304,7 +321,7 @@ class ReturnAsLoss(nn.Module):
 
     def forward(self, output, y):
         '''negative logarithm return'''
-        return -torch.sum(torch.log(torch.sum(output * y, dim=1)))
+        return -torch.sum(torch.log(torch.sum(output * (y+1), dim=1)))
 
 
 class CustomizedLoss(nn.Module):
@@ -312,7 +329,7 @@ class CustomizedLoss(nn.Module):
         super().__init__()
 
     def forward(self, output, y):
-        return -torch.sum(torch.sum(output * y, dim=1))
+        return -torch.mean(torch.sum(output * y, dim=1))
 
 
 class Oracle(nn.Module):
@@ -324,6 +341,18 @@ class Oracle(nn.Module):
         y_copy = y.clone()
         y_copy[:, 0] += 0.005 # be conservative
         return self._criteria(output, y_copy.argmax(dim=1))
+
+
+class Binary(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._criteria = nn.BCELoss()
+
+    def forward(self, output, y):
+        y_copy = y.clone()
+        y_copy[y>0] = 1
+        y_copy[y<0] = 0
+        return self._criteria(output, y_copy)
 
 class PenalizeSingle(nn.Module):
     '''Add penalize to oracle error function'''
