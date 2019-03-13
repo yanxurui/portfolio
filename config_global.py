@@ -25,7 +25,7 @@ valid_batch_size = 500
 
 # test
 test_batch_num = None
-test_batch_size = 10
+test_batch_size = 1
 online_train = False
 online_train_batch_num = 10
 p = 0.01

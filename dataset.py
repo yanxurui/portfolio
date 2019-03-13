@@ -63,11 +63,15 @@ class StockData:
         self.p = p
         self._preprocess()
 
+    def _idx_date(self, i):
+        '''convert int index to date
+        '''
+        return self.data_raw.index[i].strftime('%Y-%m-%d')
+
     def info(self):
-        date = lambda i: self.data_raw.index[i].strftime('%Y-%m-%d')
-        print("Training   from {} to {}".format(date(self.window), date(self.train_end-1)))
-        print("Validation from {} to {}".format(date(self.train_end), date(self.valid_end-1)))
-        print("Test       from {} to {}".format(date(self.valid_end), date(self.test_end)))
+        print("Training   from {} to {}".format(self._idx_date(self.window), self._idx_date(self.train_end-1)))
+        print("Validation from {} to {}".format(self._idx_date(self.train_end), self._idx_date(self.valid_end-1)))
+        print("Test       from {} to {}".format(self._idx_date(self.valid_end), self._idx_date(self.test_end)))
 
     def _fi(self, *features):
         codes = []
@@ -178,7 +182,7 @@ class StockData:
             self.test_end = offset+self.test_batch_size # save test_end for online training
             yield self._get_test_batch(offset, self.test_end)
 
-    def online_train(self, batch_num=10, p=0.2):
+    def online_train(self):
         # sample by geometric distribution
         r = np.random.geometric(p=self.p, size=self.online_train_batch_num)
         offsets = self.test_end - self.train_batch_size - (r - 1)
@@ -187,9 +191,11 @@ class StockData:
             yield self._get_train_batch(offset, offset+self.train_batch_size)
 
     def UBAH(self, begin, end=-1):
-        close = self.data_raw.iloc[begin:end].loc[:,idx['Close', self.stocks]]
-        close_prev = self.data_raw.iloc[begin-1].loc[idx['Close', self.stocks]]
-        ROC = close/close_prev # broadcast
+        '''Uniformly Buy And Hold
+        a baseline representing the market movement
+        '''
+        close = self.data_raw.iloc[begin-1:end].loc[:,idx['Close', self.stocks]]
+        ROC = close.pct_change().iloc[1:] # broadcast
         return ROC.mean(axis=1)
 
 
@@ -249,7 +255,8 @@ class StockDataTestCase(unittest.TestCase):
             window=5,
             train_batch_num=2, train_batch_size=3,
             valid_batch_num=1, valid_batch_size=5,
-            test_batch_num=2, test_batch_size=2)
+            test_batch_num=2, test_batch_size=2,
+            online_train_batch_num=1, p=1)
         return cls.d
 
     def test_fi(self):
@@ -329,7 +336,7 @@ class StockDataTestCase(unittest.TestCase):
         self.assertEqual(i, [18, 19])
 
         # test_online_train
-        i2, X2, t2, y2 = next(d.online_train(batch_num=1, p=1))
+        i2, X2, t2, y2 = next(d.online_train())
         self.assertEqual(i, i2[-2:])
 
     def test_UBAH(self):
@@ -338,7 +345,7 @@ class StockDataTestCase(unittest.TestCase):
         self.assertEqual(m.shape, (5,))
         self.assertFalse(np.isnan(m).any())
         c = d._fi('Close')[0]
-        self.assertEqual(m[1], np.mean(d.data[c,:,10+1]/d.data[c,:,10-1]))
+        self.assertEqual(m[1], np.mean(d.data[c,:,10+1]/d.data[c,:,10]-1))
 
     def test_single_stock(self):
         d = StockData('data2_test.csv',
@@ -356,7 +363,7 @@ class StockDataTestCase(unittest.TestCase):
             d.data_raw['Close', 'AAPL'][8+1-5+1]/d.data_raw['Close', 'AAPL'][8+1-5]-1)
         m = d.UBAH(10, 15)
         self.assertEqual(m[1],
-            d.data_raw.iloc[10+1]['Close', 'AAPL']/d.data_raw.iloc[10-1]['Close', 'AAPL'])
+            d.data_raw.iloc[10+1]['Close', 'AAPL']/d.data_raw.iloc[10]['Close', 'AAPL']-1)
 
 
 if __name__ == '__main__':
