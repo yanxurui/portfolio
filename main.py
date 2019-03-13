@@ -23,6 +23,7 @@ def ret(output, y):
     return (output*y).sum(axis=1)
 
 def train_batch(X, target, y):
+    net.train()
     X, target = torch.Tensor(X), torch.Tensor(target)
     optimizer.zero_grad()   # zero the gradient buffers
     output = net(X)
@@ -36,6 +37,7 @@ def train_batch(X, target, y):
     )
 
 def test_batch(X, y):
+    net.eval()
     X = torch.Tensor(X)
     output = net(X)
     output = output.detach().numpy()
@@ -49,34 +51,30 @@ def train():
     start_time = time()
     net.reset_parameters() # repeat training in jupyter notebook
     summary = []
+    best_val_ret = None
     # loop over epoch and batch
     for e in range(epoch):
-        net.train()
         current_epoch = defaultdict(list)
         for i, X, target, y in data.train():
             tr_loss, tr_ret = train_batch(X, target, y)
             current_epoch['tr_loss'].append(tr_loss)
             current_epoch['tr_ind'].extend(i)
             current_epoch['tr_ret'].extend(tr_ret)
-
-        # import pdb
-        # pdb.set_trace()
         # evaluate
-        net.eval()
         for i, X, y in data.valid():
-            _, va_ret = test_batch(X, y)
-            current_epoch['va_ind'].extend(i)
-            current_epoch['va_ret'].extend(va_ret)
+            _, val_ret = test_batch(X, y)
+            current_epoch['val_ind'].extend(i)
+            current_epoch['val_ret'].extend(val_ret)
         # 3 values: loss, train average daily % return, valid ...
         aggregate = [np.mean(current_epoch['tr_loss']),
                      np.mean(current_epoch['tr_ret'])*100,
-                     np.mean(current_epoch['va_ret'])*100]
-        print("epoch:{:3d}, tr_loss:{:+.3f}, tr_ret:{:+.3f}, va_ret:{:+.3f}".format(
+                     np.mean(current_epoch['val_ret'])*100]
+        print("epoch:{:3d}, tr_loss:{:+.3f}, tr_ret:{:+.3f}, val_ret:{:+.3f}".format(
             e+1, *aggregate))
         # only save the best model on validation set
-        if not summary or aggregate[-1] > summary[-1][-1]:
-            best = e+1
-            best_epoch = current_epoch
+        if not best_val_ret or aggregate[-1] >= best_val_ret:
+            best_val_ret = aggregate[-1]
+            val_epoch = current_epoch
             torch.save({
                 'net': net.state_dict(),
                 'optimizer': optimizer.state_dict(),
@@ -84,14 +82,14 @@ def train():
             }, save_dir.joinpath('state.pt'))
         summary.append(aggregate)
 
-    summary = pd.DataFrame(summary, columns=['tr_loss', 'tr_ret', 'va_ret']).to_csv(
-        save_dir.joinpath('train_summary.csv'))
+    summary = pd.DataFrame(summary, columns=['tr_loss', 'tr_ret', 'val_ret'])
+    summary.to_csv(save_dir.joinpath('train_summary.csv'))
     pd.DataFrame({'ret':current_epoch['tr_ret']}, index=current_epoch['tr_ind']).to_csv(
         save_dir.joinpath('train_last_epoch.csv'))
-    pd.DataFrame({'ret':best_epoch['va_ret']}, index=best_epoch['va_ind']).to_csv(
+    pd.DataFrame({'ret':val_epoch['val_ret']}, index=val_epoch['val_ind']).to_csv(
         save_dir.joinpath('valid_best_epoch.csv'))
     print('Training finished after {:.1f}s'.format(time()-start_time))
-    print('Best epoch: {}'.format(best))
+    print('Early stop epoch: {}'.format(summary['val_ret'].values.argmax()+1))
     print('-'*20)
 
 
@@ -116,11 +114,9 @@ def test():
         summary.extend(zip(i, r))
 
         if online_train:
-            net.train()
             current_epoch = []
-            for j, X, target, y in data.online_train(online_train_batch_num, p):
+            for j, X, target, y in data.online_train():
                 current_epoch.append(train_batch(X, target, y))
-            net.eval()
             current_epoch = np.array(current_epoch)
     summary = pd.DataFrame(summary, columns=['index', 'ret'])
     summary = summary.set_index('index')
@@ -149,6 +145,8 @@ if __name__ == '__main__':
     os.environ['CONFIG_LOCAL_DIR'] = args.path
     # variables defined here are global/model level
     save_dir = Path(args.path)
+    if not os.path.isfile(os.path.join(save_dir, 'config.py')):
+        raise Exception('{}: wrong path or no local config'.format(save_dir))
     from config_global import epoch, net, optimizer, criterion, data, online_train
     if not args.test:
         train()
