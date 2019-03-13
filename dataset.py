@@ -44,7 +44,7 @@ class StockData:
     def __init__(self, path, cash=True, window=10, features=None, stocks=None,
                        train_batch_num=200, train_batch_size=10,
                        valid_batch_num=1, valid_batch_size=100,
-                       test_batch_num=None, test_batch_size=1):
+                       test_batch_num=None, test_batch_size=1, online_train_batch_num=10, p=0.01):
         self._load_data(path, features, stocks)
         self.train_end = window + train_batch_num * train_batch_size
         self.valid_end = self.train_end + valid_batch_num * valid_batch_size
@@ -59,6 +59,8 @@ class StockData:
         self.valid_batch_size = valid_batch_size
         self.test_batch_num = test_batch_num
         self.test_batch_size = test_batch_size
+        self.online_train_batch_num = online_train_batch_num
+        self.p = p
         self._preprocess()
 
     def info(self):
@@ -178,7 +180,8 @@ class StockData:
 
     def online_train(self, batch_num=10, p=0.2):
         # sample by geometric distribution
-        offsets = self.test_end - self.train_batch_size - (np.random.geometric(p=p, size=batch_num) - 1)
+        r = np.random.geometric(p=self.p, size=self.online_train_batch_num)
+        offsets = self.test_end - self.train_batch_size - (r - 1)
         offsets = np.clip(offsets, a_min=self.window, a_max=None)
         for offset in offsets:
             yield self._get_train_batch(offset, offset+self.train_batch_size)
