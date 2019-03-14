@@ -86,31 +86,25 @@ class CNN_Sigmoid(CNN):
         self.output = nn.Sigmoid()
 
 
-class Conv2DNet(nn.Module):
+class Conv2DNet(Base):
     '''2d convolution across different stocks'''
     def __init__(self, shape):
         super(Conv2DNet, self).__init__()
 
         x = torch.zeros(shape) # dummy inputs used to infer shapes of layers
-        print(x.shape)
         self.conv1 = nn.Conv2d(x.shape[1], 128, (3, 3), bias=False)
         x = self.conv1(x)
-        print(x.shape)
         self.conv2 = nn.Conv2d(x.shape[1], 64, (3, 3), bias=False)
         x = self.conv2(x)
-        print(x.shape)
         self.conv3 = nn.Conv2d(x.shape[1], 32, (3, x.shape[3]), bias=False)
         x = self.conv3(x)
-        print(x.shape)
         self.conv4 = nn.Conv2d(x.shape[1], 1, (1, 1), bias=False)
         x = self.conv4(x)
-        print(x.shape)
         x = x.view(-1, 5)
-        print(x.shape)
 
         self.extract = nn.Linear(x.shape[1], 11)
         x = self.extract(x)
-        print(x.shape)
+
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
@@ -121,14 +115,7 @@ class Conv2DNet(nn.Module):
         x = F.softmax(x, dim=-1)
         return x
 
-    def reset_parameters(self):
-        for m in self.children():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-                m.reset_parameters()
-
-
-
-class SeedLSTM(nn.Module):
+class SeedLSTM(Base):
     def __init__(self, shape):
         super(SeedLSTM, self).__init__()
         self.lstm = nn.LSTM(shape[1], 20)
@@ -148,14 +135,9 @@ class SeedLSTM(nn.Module):
         assert len(x_dim_align.shape) == 2
 
         x_permuted = x_dim_align.permute(1, 0)
-
         return F.softmax(x_permuted, dim=1)
 
-    def reset_parameters(self):
-        pass
-
-
-class SeedRNN(nn.Module):
+class SeedRNN(Base):
     '''replace seed network's LSTM with RNN
     '''
     def __init__(self, shape):
@@ -180,10 +162,8 @@ class SeedRNN(nn.Module):
 
         return F.softmax(x_permuted, dim=1)
 
-    def reset_parameters(self):
-        pass
 
-class StackRNN(nn.Module):
+class StackRNN(Base):
     '''replace seed network's LSTM with RNN
     '''
     def __init__(self, shape, layers=2, dropout=0):
@@ -213,8 +193,35 @@ class StackRNN(nn.Module):
 
         return F.softmax(x_permuted, dim=1)
 
-    def reset_parameters(self):
-        pass
+class StackLSTM(Base):
+    '''stacked LSTM
+    '''
+    def __init__(self, shape, layers=2, dropout=0):
+        super(StackLSTM, self).__init__()
+        self.lstm = nn.LSTM(shape[1], 20, num_layers=layers, dropout=dropout)
+        self.projection = nn.Linear(20, 1, bias=False)
+        self.conv1d = nn.Conv1d(layers, 1, 1, bias=False)
+
+    def forward(self, x):
+        x_break = [x[:,:,i,:] for i in range(x.shape[2])]
+        x_lstmed = []
+        for i in range(len(x_break)):
+            _x = x_break[i]
+            o, (h, c) = self.lstm(_x.permute(2, 0, 1))
+            x_lstmed.append(self.projection(h))
+
+        x_dim_align = torch.stack(x_lstmed).squeeze()
+        if len(x_dim_align.shape) < 3:
+            x_dim_align = x_dim_align.unsqueeze(2)
+        x_dim_align = self.conv1d(x_dim_align)
+        x_dim_align = x_dim_align.squeeze()
+        if len(x_dim_align.shape) < 2:
+            x_dim_align = x_dim_align.unsqueeze(1)
+        assert len(x_dim_align.shape) == 2
+
+        x_permuted = x_dim_align.permute(1, 0)
+
+        return F.softmax(x_permuted, dim=1)
 
 class OnehotLSTM(nn.Module):
     '''seed lstm structure, add onehot to represent assets
@@ -246,10 +253,8 @@ class OnehotLSTM(nn.Module):
 
         return F.softmax(x_permuted, dim=1)
 
-    def reset_parameters(self):
-        pass
 
-class CrossRNN(nn.Module):
+class CrossRNN(Base):
     '''RNN with all asset price considered, i.e. input size 44'''
     def __init__(self, shape):
         super(RnnNet, self).__init__()
@@ -277,10 +282,7 @@ class CrossRNN(nn.Module):
         x = x.view(x.shape[0], -1)
         return F.softmax(x, dim=-1)
 
-    def reset_parameters(self):
-        pass
-
-class CrossLSTM(nn.Module):
+class CrossLSTM(Base):
     '''LSTM with all asset price considered, i.e. input size 44'''
     def __init__(self, shape):
         super(CrossLSTM, self).__init__()
@@ -308,10 +310,6 @@ class CrossLSTM(nn.Module):
         x = self.conv(x)
         x = x.view(x.shape[0], -1)
         return F.softmax(x, dim=-1)
-
-    def reset_parameters(self):
-        pass
-
 
 
 # define loss function
