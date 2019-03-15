@@ -317,9 +317,10 @@ class Binary(nn.Module):
 
     def forward(self, output, y):
         y_copy = y.clone()
-        y_copy[y>0] = 1
+        y_copy[y>0] = 0.9 # increase precision for positive class
         y_copy[y<0] = 0
         return self._criteria(output, y_copy)
+
 
 class PenalizeSingle(nn.Module):
     '''Add penalize to oracle error function'''
