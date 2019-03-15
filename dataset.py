@@ -220,7 +220,7 @@ class StockData_CR(StockData):
         t = [t[i:i+forward_days] for i in range(0, len(t)-forward_days+1)]
         t = np.array(t)
         t = t.prod(axis=1)
-        return indices, X, t, y
+        return indices, X, t-1, y
 
 
 class StockData_DR(StockData):

@@ -114,10 +114,8 @@ def test():
         summary.extend(zip(i, r))
 
         if online_train:
-            current_epoch = []
             for j, X, target, y in data.online_train():
-                current_epoch.append(train_batch(X, target, y))
-            current_epoch = np.array(current_epoch)
+                train_batch(X, target, y)
     summary = pd.DataFrame(summary, columns=['index', 'ret'])
     summary = summary.set_index('index')
     summary.to_csv(save_dir.joinpath('test_summary.csv'))

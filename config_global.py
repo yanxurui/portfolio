@@ -62,7 +62,7 @@ if 'data' not in _namespace:
         p=p)
 data.info()
 if 'net' not in _namespace:
-    net = Net((train_batch_size, len(data.features), len(data.stocks)+1, window))
+    net = Net((train_batch_size, len(data.features), len(data.assets), window))
 if 'optimizer' not in _namespace:
     optimizer = Optimizer(net.parameters(), lr=learning_rate)
 if 'criterion' not in _namespace:

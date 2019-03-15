@@ -29,6 +29,6 @@ do
 	save_dir="exp/$path"
 	echo $save_dir
     echo
-    python main.py $save_dir
+    python -u main.py $save_dir | tee $save_dir/log
     echo '============'
 done
