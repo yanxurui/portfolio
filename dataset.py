@@ -74,12 +74,20 @@ class StockData:
         print("Test       from {} to {}".format(self._idx_date(self.valid_end), self._idx_date(self.test_end)))
 
     def _fi(self, *features):
+        '''convert feature names to indices'''
         codes = []
         for f in features:
             c = self.features.get(f, None)
             if c is not None:
                 codes.append(c)
         return codes # might be empty
+
+    @property
+    def assets(self):
+        stocks = list(self.stocks) # make a copy
+        if self.cash:
+            stocks.insert(0, 'CASH')
+        return stocks
 
     def _load_data(self, path, features, stocks):
         # read dataframe from csv file
