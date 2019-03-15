@@ -126,7 +126,6 @@ def test():
     outputs = dict(outputs)
     outputs = pd.DataFrame(outputs).T
     outputs.to_csv(save_dir.joinpath('test_output.csv'))
-    print((outputs.sum(axis=0)/outputs.values.sum()).round(3))
 
 def load_model(path):
     checkpoint = torch.load(path)
