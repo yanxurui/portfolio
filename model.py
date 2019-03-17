@@ -50,7 +50,7 @@ class CNN(Base):
 
 
 class Softmax_T(nn.Module):
-    def __init__(self, dim=None, T=30):
+    def __init__(self, dim=None, T=25):
         super().__init__()
         self.dim = dim
         self.T = T
@@ -127,61 +127,41 @@ class Conv2DNet(nn.Module):
                 m.reset_parameters()
 
 
-
-class SeedLSTM(nn.Module):
+class RNN(Base):
     def __init__(self, shape):
-        super(SeedLSTM, self).__init__()
-        self.lstm = nn.LSTM(shape[1], 20)
-        self.projection = nn.Linear(20, 1, bias=False)
+        super().__init__()
+        self.rnn = nn.RNN(shape[1], 20, num_layers=2, dropout=0.1, batch_first=True)
+        self.fc = nn.Linear(20, 1, bias=False)
+        self.output = Softmax_T(dim=1)
 
     def forward(self, x):
-        x_break = [x[:,:,i,:] for i in range(x.shape[2])]
-        x_lstmed = []
-        for i in range(len(x_break)):
-            _x = x_break[i]
-            o, (h, c) = self.lstm(_x.permute(2, 0, 1))
-            x_lstmed.append(self.projection(h))
-
-        x_dim_align = torch.stack(x_lstmed).squeeze()
-        if len(x_dim_align.shape) < 2:
-            x_dim_align = x_dim_align.unsqueeze(1)
-        assert len(x_dim_align.shape) == 2
-
-        x_permuted = x_dim_align.permute(1, 0)
-
-        return F.softmax(x_permuted, dim=1)
-
-    def reset_parameters(self):
-        pass
+        _x = x.permute(0, 2, 3, 1) # (batch, asset, sequence, feature)
+        _x = [_x[:, i] for i in range(_x.shape[1])]
+        output = []
+        for a in _x:
+            o, h = self.rnn(a)
+            output.append(self.fc(h[-1])) # the last hidden state of last layer
+        output = torch.stack(output).squeeze(dim=-1).permute(1, 0)
+        return self.output(output)
 
 
-class SeedRNN(nn.Module):
-    '''replace seed network's LSTM with RNN
-    '''
+class LSTM(Base):
     def __init__(self, shape):
-        super(SeedRNN, self).__init__()
-        self.rnn = nn.RNN(shape[1], 20)
-        self.projection = nn.Linear(20, 1, bias=False)
+        super().__init__()
+        self.lstm = nn.LSTM(shape[1], 20, num_layers=2, dropout=0.1, batch_first=True)
+        self.fc = nn.Linear(20, 1, bias=False)
+        self.output = Softmax_T(dim=1)
 
     def forward(self, x):
-        x_break = [x[:,:,i,:] for i in range(x.shape[2])]
-        x_lstmed = []
-        for i in range(len(x_break)):
-            _x = x_break[i]
-            o, h = self.rnn(_x.permute(2, 0, 1))
-            x_lstmed.append(self.projection(h))
+        _x = x.permute(0, 2, 3, 1) # (batch, asset, sequence, feature)
+        _x = [_x[:, i] for i in range(_x.shape[1])]
+        output = []
+        for a in _x:
+            o, (h, c) = self.lstm(a)
+            output.append(self.fc(h[-1])) # the last hidden state of last layer
+        output = torch.stack(output).squeeze(dim=-1).permute(1, 0)
+        return self.output(output)
 
-        x_dim_align = torch.stack(x_lstmed).squeeze()
-        if len(x_dim_align.shape) < 2:
-            x_dim_align = x_dim_align.unsqueeze(1)
-        assert len(x_dim_align.shape) == 2
-
-        x_permuted = x_dim_align.permute(1, 0)
-
-        return F.softmax(x_permuted, dim=1)
-
-    def reset_parameters(self):
-        pass
 
 class OnehotLSTM(nn.Module):
     '''seed lstm structure, add onehot to represent assets
