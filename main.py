@@ -93,13 +93,6 @@ def train():
     print('-'*20)
 
 
-def reallocate(w):
-    # assets that have weights lower than cash are eliminated
-    cash = w[:, 0][:, None]
-    w[w < cash] = 0
-    w[:, 0] += 1-w.sum(axis=1)
-    return w
-
 def test():
     # always load model from disk 
     #   1. to repeat test without training

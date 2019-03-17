@@ -6,7 +6,7 @@ paths=(
 'network/RNN'
 'network/LSTM'
 
-'online'
+# 'online'
 
 'features'
 
@@ -14,7 +14,7 @@ paths=(
 'output/tanh'
 
 'loss/binary'
-'loss/oracle'
+'loss/multiclass'
 
 'hyperparameters/window/10'
 'hyperparameters/window/15'

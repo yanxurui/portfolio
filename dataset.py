@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 idx = pd.IndexSlice
-
+np.random.seed(0)
 
 def count(start=0, step=1, size=None):
     # count(10) --> 10 11 12 13 14 ...
