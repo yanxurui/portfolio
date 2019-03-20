@@ -209,30 +209,32 @@ class StockData:
 
 class StockData_CR(StockData):
     # cumulative return in the following days as criteria
+    def __init__(self, *args, forward_days=3, **kargs):
+        super().__init__(*args, **kargs)
+        self.forward_days = forward_days
+
     def _get_train_batch(self, begin, end):
         indices, X, target, y = super()._get_train_batch(begin, end)
 
-        forward_days = 3
         # only consider the following day by default
-        t = self._price_change(begin, end+forward_days-1) # (batch_size+3, assets)
+        t = self._price_change(begin, end+self.forward_days-1) # (batch_size+3, assets)
         t += 1
         # split into overlapping subarrays
-        t = [t[i:i+forward_days] for i in range(0, len(t)-forward_days+1)]
+        t = [t[i:i+self.forward_days] for i in range(0, len(t)-self.forward_days+1)]
         t = np.array(t)
         t = t.prod(axis=1)
         return indices, X, t-1, y
 
 
-class StockData_DR(StockData):
+class StockData_DR(StockData_CR):
     # discounted return
     def _get_train_batch(self, begin, end):
 
         indices, X, target, y = super()._get_train_batch(begin, end)
 
-        forward_days = 3
-        t = self._price_change(begin, end+forward_days-1) # (batch_size+3, assets)
+        t = self._price_change(begin, end+self.forward_days-1) # (batch_size+3, assets)
         # split into overlapping subarrays
-        t = [t[i:i+forward_days] for i in range(0, len(t)-forward_days+1)]
+        t = [t[i:i+self.forward_days] for i in range(0, len(t)-self.forward_days+1)]
         t = np.array(t)
         t = np.apply_along_axis(discounted, 1, t)
         return indices, X, t, y
@@ -372,6 +374,24 @@ class StockDataTestCase(unittest.TestCase):
         m = d.UBAH(10, 15)
         self.assertEqual(m[1],
             d.data_raw.iloc[10+1]['Close', 'AAPL']/d.data_raw.iloc[10]['Close', 'AAPL']-1)
+
+    def test_return(self):
+        d1 = StockData_CR('data2_test.csv',
+            window=5,
+            train_batch_num=2, train_batch_size=3,
+            valid_batch_num=1, valid_batch_size=5,
+            test_batch_num=2, test_batch_size=2,
+            online_train_batch_num=1, p=1)
+
+        d1._get_train_batch(5, 8)
+
+        d2 = StockData_DR('data2_test.csv',
+            window=5,
+            train_batch_num=2, train_batch_size=3,
+            valid_batch_num=1, valid_batch_size=5,
+            test_batch_num=2, test_batch_size=2,
+            online_train_batch_num=1, p=1)
+        d2._get_train_batch(6, 9)
 
 
 if __name__ == '__main__':
